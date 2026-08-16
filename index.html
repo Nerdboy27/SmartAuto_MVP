@@ -37,9 +37,13 @@
   }
   #qr-section {
     height: 20%;
-    font-size: 2rem;
+    font-size: 1.5rem;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 30px;
+    box-sizing: border-box;
   }
   #payment-screen {
     display: none;
@@ -56,13 +60,21 @@
     font-weight: bold;
     margin: 0;
   }
+  #total-counter {
+    font-size: 1.5rem;
+    color: #4CAF50;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
 
 <div id="idle-screen">
   <div id="ad-space">AD SLOT 1</div>
-  <div id="qr-section">SCAN QR TO PAY</div>
+  <div id="qr-section">
+    <span>SCAN QR TO PAY</span>
+    <div id="total-counter">Total: ₹<span id="total-val">0</span></div>
+  </div>
 </div>
 
 <div id="payment-screen">
@@ -76,6 +88,7 @@
   const autoId = 'AUTO_001';
   const ads = ["AD SLOT 1", "AD SLOT 2", "AD SLOT 3"];
   let currentAd = 0;
+  let totalReceived = 0;
 
   setInterval(() => {
     currentAd = (currentAd + 1) % ads.length;
@@ -90,6 +103,12 @@
     document.getElementById('idle-screen').style.display = 'none';
     document.getElementById('payment-screen').style.display = 'flex';
     document.getElementById('amount-text').innerText = "₹" + data.amount;
+    
+    const msg = new SpeechSynthesisUtterance("Rupees " + data.amount + " received");
+    window.speechSynthesis.speak(msg);
+
+    totalReceived += parseInt(data.amount);
+    document.getElementById('total-val').innerText = totalReceived;
     
     setTimeout(() => {
       document.getElementById('payment-screen').style.display = 'none';
