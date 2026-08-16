@@ -35,14 +35,16 @@ app.post('/webhook/payment', (req, res) => {
         return res.status(403).send('Invalid signature');
     }
 
-    const { autoId, amount, status } = req.body;
-    const AUTHORIZED_AUTOS = ['AUTO_001', 'AUTO_002', 'AUTO_003']; 
+    try {
+        const paymentEntity = req.body.payload.payment.entity;
+        const amountInRupees = paymentEntity.amount / 100;
+        
+        const autoId = (paymentEntity.notes && paymentEntity.notes.autoId) ? paymentEntity.notes.autoId : 'AUTO_001';
 
-    if (status === 'success' && AUTHORIZED_AUTOS.includes(autoId)) {
-        io.to(autoId).emit('payment_received', { amount });
+        io.to(autoId).emit('payment_received', { amount: amountInRupees });
         res.sendStatus(200);
-    } else {
-        res.status(400).send('Unauthorized or Invalid ID');
+    } catch (error) {
+        res.status(400).send('Bad Request');
     }
 });
 
