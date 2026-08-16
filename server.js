@@ -24,7 +24,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const WEBHOOK_SECRET = 'DEBUG'; 
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'DEBUG';
 
 app.post('/webhook/payment', (req, res) => {
     const shasum = crypto.createHmac('sha256', WEBHOOK_SECRET);
