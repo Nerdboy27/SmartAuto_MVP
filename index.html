@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto Display</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #000;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  #idle-screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  #ad-space {
+    width: 100%;
+    height: 80%;
+    background-color: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 3rem;
+    color: #888;
+  }
+  #qr-section {
+    height: 20%;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+  }
+  #payment-screen {
+    display: none;
+    text-align: center;
+    background-color: #4CAF50;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  #amount-text {
+    font-size: 6rem;
+    font-weight: bold;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="idle-screen">
+  <div id="ad-space">AD SLOT 1</div>
+  <div id="qr-section">SCAN QR TO PAY</div>
+</div>
+
+<div id="payment-screen">
+  <h2>PAYMENT RECEIVED</h2>
+  <div id="amount-text"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const autoId = 'AUTO_001';
+  const ads = ["AD SLOT 1", "AD SLOT 2", "AD SLOT 3"];
+  let currentAd = 0;
+
+  setInterval(() => {
+    currentAd = (currentAd + 1) % ads.length;
+    document.getElementById('ad-space').innerText = ads[currentAd];
+  }, 5000);
+
+  socket.on('connect', () => {
+    socket.emit('register_device', autoId);
+  });
+
+  socket.on('payment_received', (data) => {
+    document.getElementById('idle-screen').style.display = 'none';
+    document.getElementById('payment-screen').style.display = 'flex';
+    document.getElementById('amount-text').innerText = "₹" + data.amount;
+    
+    setTimeout(() => {
+      document.getElementById('payment-screen').style.display = 'none';
+      document.getElementById('idle-screen').style.display = 'flex';
+    }, 8000);
+  });
+</script>
+</body>
+</html>
