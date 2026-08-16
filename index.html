@@ -85,7 +85,8 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
-  const autoId = 'AUTO_001';
+  const urlParams = new URLSearchParams(window.location.search);
+  const autoId = urlParams.get('id') || 'AUTO_001';
   const ads = ["AD SLOT 1", "AD SLOT 2", "AD SLOT 3"];
   let currentAd = 0;
   let totalReceived = 0;
