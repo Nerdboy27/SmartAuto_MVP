@@ -3,101 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Auto Display</title>
+<title>SmartAuto Portal</title>
 <style>
-  body { margin: 0; padding: 0; background-color: #000; color: white; font-family: Arial, sans-serif; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
-  #idle-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-  #ad-space { width: 100%; height: 80%; background-color: #222; display: flex; justify-content: center; align-items: center; font-size: 3rem; color: #888; }
-  #qr-section { height: 20%; font-size: 1.5rem; display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 30px; box-sizing: border-box; }
-  #payment-screen { display: none; text-align: center; background-color: #4CAF50; width: 100%; height: 100%; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; position: absolute; top: 0; left: 0; }
-  #amount-text { font-size: 6rem; font-weight: bold; margin: 0; }
-  #total-counter { font-size: 1.5rem; color: #4CAF50; font-weight: bold; }
-  .side-btn { position: absolute; right: 20px; padding: 15px; background: #333; color: white; border: 2px solid #555; border-radius: 50%; cursor: pointer; font-size: 24px; z-index: 100; transition: transform 0.2s; }
-  .side-btn:active { transform: scale(0.9); }
-  #btn-leaderboard { top: 20px; }
-  #btn-game { top: 90px; }
-  .modal { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; border: 2px solid #4CAF50; padding: 20px; border-radius: 10px; z-index: 200; width: 80%; max-width: 400px; text-align: center; }
-  .close-btn { position: absolute; top: 10px; right: 15px; color: red; cursor: pointer; font-size: 20px; font-weight: bold; }
+  body { margin: 0; background: #000; color: white; font-family: sans-serif; overflow: hidden; height: 100vh; }
+  #ad-space { width: 100%; height: 100vh; display: flex; justify-content: center; align-items: center; color: #333; }
   
-  /* Arrow Game Styles */
-  #arrow-display { font-size: 80px; margin: 20px 0; }
-  .arrow-controls { display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; justify-content: center; }
-  .arrow-btn { padding: 15px; font-size: 24px; background: #444; border: none; color: white; border-radius: 5px; cursor: pointer; }
-  .arrow-btn:active { background: #666; }
+  /* Single Button */
+  #btn-hub { position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: #4CAF50; display: flex; justify-content: center; align-items: center; font-size: 28px; cursor: pointer; z-index: 500; }
+  
+  /* Menu Overlay */
+  #menu-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; z-index: 1000; padding: 20px; box-sizing: border-box; }
+  .menu-btn { display: block; width: 100%; padding: 20px; margin-bottom: 10px; background: #222; border: 1px solid #4CAF50; color: white; font-size: 1.2rem; border-radius: 10px; }
+  
+  /* Game Styles */
+  #game-ui { display: none; text-align: center; margin-top: 20px; }
+  .arrow-btn { padding: 20px; font-size: 30px; margin: 5px; background: #333; border: none; color: white; border-radius: 10px; }
 </style>
 </head>
 <body>
-<div id="idle-screen">
-  <div id="ad-space">AD SLOT 1</div>
-  <div id="qr-section">
-    <span>SCAN QR TO PAY</span>
-    <div id="total-counter">Total: ₹<span id="total-val">0</span></div>
+
+<div id="ad-space">AD SLOT 1</div>
+<div id="btn-hub" onclick="openHub()">🎮</div>
+
+<div id="menu-overlay">
+  <span class="close-btn" onclick="closeHub()" style="font-size:30px; float:right;">X</span>
+  <h2 style="text-align:center;">SmartAuto Portal</h2>
+  
+  <div id="main-menu">
+    <button class="menu-btn" onclick="showGame()">Play Arrow Puzzle</button>
+    <button class="menu-btn" onclick="showLeaderboard()">🏆 Leaderboard</button>
+  </div>
+
+  <div id="game-ui">
+    <input type="text" id="p-name" placeholder="Enter Name..." style="padding:10px; width:80%;">
+    <button onclick="startGame()" style="background:#4CAF50; padding:10px; border:none; color:white;">Start</button>
+    <div id="game-play" style="display:none;">
+      <h3 id="level-text">Level: 1</h3>
+      <div id="timer" style="color:red; font-size:1.5rem;">60s</div>
+      <div id="arrow-sequence" style="font-size:2rem; margin:20px;"></div>
+      <div>
+        <button class="arrow-btn" onclick="playerMove('⬆️')">⬆️</button>
+        <button class="arrow-btn" onclick="playerMove('➡️')">➡️</button>
+        <button class="arrow-btn" onclick="playerMove('⬇️')">⬇️</button>
+        <button class="arrow-btn" onclick="playerMove('⬅️')">⬅️</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="leaderboard-ui" style="display:none;">
+    <h3>Top Players</h3>
+    <ul id="rank-list" style="list-style:none;"><li>1. Rahul - 1200</li><li>2. Amit - 1050</li></ul>
   </div>
 </div>
 
-<button id="btn-leaderboard" class="side-btn">🏆</button>
-<button id="btn-game" class="side-btn">🎮</button>
-
-<div id="modal-leaderboard" class="modal">
-  <span class="close-btn" onclick="closeModals()">X</span>
-  <h2>Leaderboard</h2>
-  <ul style="list-style:none; padding:0;"><li>1. Rahul (₹150)</li><li>2. Amit (₹120)</li></ul>
-</div>
-
-<div id="modal-game" class="modal">
-  <span class="close-btn" onclick="closeModals()">X</span>
-  <h2>Arrow Puzzle</h2>
-  <div id="game-score">Score: <span id="score-val">0</span></div>
-  <div id="arrow-display">⬆️</div>
-  <div class="arrow-controls">
-    <div></div><button class="arrow-btn" onclick="checkArrow('⬆️')">⬆️</button><div></div>
-    <button class="arrow-btn" onclick="checkArrow('⬅️')">⬅️</button><div></div><button class="arrow-btn" onclick="checkArrow('➡️')">➡️</button>
-    <div></div><button class="arrow-btn" onclick="checkArrow('⬇️')">⬇️</button><div></div>
-  </div>
-</div>
-
-<div id="payment-screen">
-  <h2>PAYMENT RECEIVED</h2>
-  <div id="amount-text"></div>
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
 <script>
-  const socket = io();
-  const autoId = new URLSearchParams(window.location.search).get('id') || 'AUTO_001';
-  let gameScore = 0;
-  const arrows = ['⬆️', '⬇️', '⬅️', '➡️'];
-  let currentArrow = '⬆️';
+  let level = 1, sequence = [], userIndex = 0, timer, timeLeft = 60;
+  const arrows = ['⬆️', '➡️', '⬇️', '⬅️'];
 
-  function setRandomArrow() {
-    currentArrow = arrows[Math.floor(Math.random() * arrows.length)];
-    document.getElementById('arrow-display').innerText = currentArrow;
+  function openHub() { document.getElementById('menu-overlay').style.display = 'block'; }
+  function closeHub() { document.getElementById('menu-overlay').style.display = 'none'; clearInterval(timer); }
+  function showGame() { document.getElementById('main-menu').style.display='none'; document.getElementById('game-ui').style.display='block'; }
+  function showLeaderboard() { document.getElementById('main-menu').style.display='none'; document.getElementById('leaderboard-ui').style.display='block'; }
+
+  function generateLevel() {
+    sequence = Array.from({length: level + 2}, () => arrows[Math.floor(Math.random()*4)]);
+    document.getElementById('arrow-sequence').innerText = sequence.join(' ');
+    userIndex = 0;
   }
 
-  function checkArrow(input) {
-    if (input === currentArrow) {
-      gameScore += 10;
-      document.getElementById('score-val').innerText = gameScore;
-      setRandomArrow();
-    }
+  function startGame() {
+    if(!document.getElementById('p-name').value) return alert("Enter Name");
+    document.getElementById('game-play').style.display = 'block';
+    generateLevel();
+    timer = setInterval(() => {
+      timeLeft--;
+      document.getElementById('timer').innerText = timeLeft + "s";
+      if(timeLeft <= 0) { clearInterval(timer); alert("Time Up!"); closeHub(); }
+    }, 1000);
   }
 
-  socket.on('connect', () => socket.emit('register_device', autoId));
-  socket.on('update_total', (data) => document.getElementById('total-val').innerText = data.total);
-
-  document.getElementById('btn-leaderboard').onclick = () => { closeModals(); document.getElementById('modal-leaderboard').style.display = 'block'; };
-  document.getElementById('btn-game').onclick = () => { closeModals(); setRandomArrow(); document.getElementById('modal-game').style.display = 'block'; };
-
-  function closeModals() { document.getElementById('modal-leaderboard').style.display = 'none'; document.getElementById('modal-game').style.display = 'none'; }
-
-  socket.on('payment_received', (data) => {
-    closeModals();
-    document.getElementById('idle-screen').style.display = 'none';
-    document.getElementById('payment-screen').style.display = 'flex';
-    document.getElementById('amount-text').innerText = "₹" + data.amount;
-    document.getElementById('total-val').innerText = data.newTotal;
-    setTimeout(() => { document.getElementById('payment-screen').style.display = 'none'; document.getElementById('idle-screen').style.display = 'flex'; }, 8000);
-  });
+  function playerMove(move) {
+    if(move === sequence[userIndex]) {
+      userIndex++;
+      if(userIndex === sequence.length) { level++; document.getElementById('level-text').innerText = "Level: "+level; generateLevel(); }
+    } else { alert("Wrong Move!"); }
+  }
 </script>
 </body>
 </html>
