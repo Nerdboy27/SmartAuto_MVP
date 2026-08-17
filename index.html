@@ -6,17 +6,13 @@
 <title>SmartAuto Portal</title>
 <style>
   body { margin: 0; background: #000; color: white; font-family: sans-serif; overflow: hidden; height: 100vh; }
-  #ad-space { width: 100%; height: 100vh; display: flex; justify-content: center; align-items: center; color: #333; }
-  
-  /* Single Button */
-  #btn-hub { position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: #4CAF50; display: flex; justify-content: center; align-items: center; font-size: 28px; cursor: pointer; z-index: 500; }
-  
-  /* Menu Overlay */
+  #ad-space { width: 100%; height: 100vh; display: flex; justify-content: center; align-items: center; color: #333; font-size: 2rem; }
+  #btn-hub { position: absolute; top: 20px; right: 20px; width: 65px; height: 65px; border-radius: 50%; background: #4CAF50; display: flex; justify-content: center; align-items: center; font-size: 32px; cursor: pointer; z-index: 500; border: 3px solid #fff; }
   #menu-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; z-index: 1000; padding: 20px; box-sizing: border-box; }
-  .menu-btn { display: block; width: 100%; padding: 20px; margin-bottom: 10px; background: #222; border: 1px solid #4CAF50; color: white; font-size: 1.2rem; border-radius: 10px; }
-  
-  /* Game Styles */
-  #game-ui { display: none; text-align: center; margin-top: 20px; }
+  .menu-btn { display: block; width: 100%; padding: 20px; margin-bottom: 15px; background: #222; border: 1px solid #4CAF50; color: white; font-size: 1.2rem; border-radius: 10px; cursor: pointer; }
+  .back-btn { background: #555; }
+  .close-btn { font-size: 30px; cursor: pointer; float: right; color: #ff5555; }
+  #game-ui, #leaderboard-ui, #main-menu { display: none; text-align: center; margin-top: 20px; }
   .arrow-btn { padding: 20px; font-size: 30px; margin: 5px; background: #333; border: none; color: white; border-radius: 10px; }
 </style>
 </head>
@@ -26,19 +22,21 @@
 <div id="btn-hub" onclick="openHub()">🎮</div>
 
 <div id="menu-overlay">
-  <span class="close-btn" onclick="closeHub()" style="font-size:30px; float:right;">X</span>
+  <span class="close-btn" onclick="closeHub()">X</span>
   <h2 style="text-align:center;">SmartAuto Portal</h2>
   
   <div id="main-menu">
-    <button class="menu-btn" onclick="showGame()">Play Arrow Puzzle</button>
-    <button class="menu-btn" onclick="showLeaderboard()">🏆 Leaderboard</button>
+    <button class="menu-btn" onclick="showGame()">🎮 Play Arrow Puzzle</button>
+    <button class="menu-btn" onclick="fetchLeaderboard()">🏆 View Leaderboard</button>
   </div>
 
   <div id="game-ui">
-    <input type="text" id="p-name" placeholder="Enter Name..." style="padding:10px; width:80%;">
-    <button onclick="startGame()" style="background:#4CAF50; padding:10px; border:none; color:white;">Start</button>
+    <div id="game-setup">
+      <input type="text" id="p-name" placeholder="Enter Name..." style="padding:10px; width:80%; border-radius:5px; margin-bottom:10px;">
+      <button onclick="startGame()" style="background:#4CAF50; padding:10px; border:none; color:white; border-radius:5px; width:80%;">Start Game</button>
+    </div>
     <div id="game-play" style="display:none;">
-      <h3 id="level-text">Level: 1</h3>
+      <h3 id="level-text">Level: 1 | Score: <span id="score-val">0</span></h3>
       <div id="timer" style="color:red; font-size:1.5rem;">60s</div>
       <div id="arrow-sequence" style="font-size:2rem; margin:20px;"></div>
       <div>
@@ -47,23 +45,64 @@
         <button class="arrow-btn" onclick="playerMove('⬇️')">⬇️</button>
         <button class="arrow-btn" onclick="playerMove('⬅️')">⬅️</button>
       </div>
+      <button class="menu-btn" onclick="surrenderGame()" style="background:orange; margin-top:20px;">Surrender</button>
     </div>
+    <button class="menu-btn back-btn" onclick="showMain()" id="game-back-btn">⬅️ Back to Menu</button>
   </div>
 
-  <div id="leaderboard-ui" style="display:none;">
+  <div id="leaderboard-ui">
     <h3>Top Players</h3>
-    <ul id="rank-list" style="list-style:none;"><li>1. Rahul - 1200</li><li>2. Amit - 1050</li></ul>
+    <ul id="rank-list" style="list-style:none; padding:0;"></ul>
+    <button class="menu-btn back-btn" onclick="showMain()">⬅️ Back to Menu</button>
   </div>
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
-  let level = 1, sequence = [], userIndex = 0, timer, timeLeft = 60;
+  const socket = io();
+  let level = 1, sequence = [], userIndex = 0, timer, timeLeft = 60, score = 0;
   const arrows = ['⬆️', '➡️', '⬇️', '⬅️'];
 
-  function openHub() { document.getElementById('menu-overlay').style.display = 'block'; }
-  function closeHub() { document.getElementById('menu-overlay').style.display = 'none'; clearInterval(timer); }
-  function showGame() { document.getElementById('main-menu').style.display='none'; document.getElementById('game-ui').style.display='block'; }
-  function showLeaderboard() { document.getElementById('main-menu').style.display='none'; document.getElementById('leaderboard-ui').style.display='block'; }
+  socket.on('leaderboard_updated', () => {
+    if (document.getElementById('leaderboard-ui').style.display === 'block') {
+      fetchLeaderboard();
+    }
+  });
+
+  function openHub() { 
+    document.getElementById('menu-overlay').style.display = 'block'; 
+    showMain();
+  }
+  
+  function closeHub() { 
+    document.getElementById('menu-overlay').style.display = 'none'; 
+    clearInterval(timer); 
+  }
+  
+  function showMain() { 
+    document.getElementById('main-menu').style.display = 'block'; 
+    document.getElementById('game-ui').style.display = 'none'; 
+    document.getElementById('leaderboard-ui').style.display = 'none'; 
+    document.getElementById('game-setup').style.display = 'block';
+    document.getElementById('game-play').style.display = 'none';
+    document.getElementById('game-back-btn').style.display = 'block';
+    clearInterval(timer);
+  }
+  
+  function showGame() { 
+    document.getElementById('main-menu').style.display = 'none'; 
+    document.getElementById('game-ui').style.display = 'block'; 
+  }
+  
+  async function fetchLeaderboard() {
+    document.getElementById('main-menu').style.display = 'none'; 
+    document.getElementById('leaderboard-ui').style.display = 'block';
+    try {
+      const res = await fetch('/leaderboard');
+      const data = await res.json();
+      document.getElementById('rank-list').innerHTML = data.map((p,i) => `<li>${i+1}. ${p.name} - ${p.score}</li>`).join('');
+    } catch(e) {}
+  }
 
   function generateLevel() {
     sequence = Array.from({length: level + 2}, () => arrows[Math.floor(Math.random()*4)]);
@@ -72,21 +111,56 @@
   }
 
   function startGame() {
-    if(!document.getElementById('p-name').value) return alert("Enter Name");
+    const name = document.getElementById('p-name').value;
+    if(!name) return alert("Enter Name");
+    document.getElementById('game-setup').style.display = 'none';
+    document.getElementById('game-back-btn').style.display = 'none';
     document.getElementById('game-play').style.display = 'block';
+    level = 1;
+    score = 0;
+    timeLeft = 60;
+    document.getElementById('score-val').innerText = score;
+    document.getElementById('level-text').innerHTML = `Level: ${level} | Score: <span id="score-val">${score}</span>`;
     generateLevel();
     timer = setInterval(() => {
       timeLeft--;
       document.getElementById('timer').innerText = timeLeft + "s";
-      if(timeLeft <= 0) { clearInterval(timer); alert("Time Up!"); closeHub(); }
+      if(timeLeft <= 0) { 
+        endGame(); 
+      }
     }, 1000);
   }
 
   function playerMove(move) {
     if(move === sequence[userIndex]) {
       userIndex++;
-      if(userIndex === sequence.length) { level++; document.getElementById('level-text').innerText = "Level: "+level; generateLevel(); }
-    } else { alert("Wrong Move!"); }
+      if(userIndex === sequence.length) { 
+        level++; 
+        score += 10;
+        document.getElementById('level-text').innerHTML = `Level: ${level} | Score: <span id="score-val">${score}</span>`; 
+        generateLevel(); 
+      }
+    } else { 
+      alert("Wrong Move!"); 
+    }
+  }
+
+  async function endGame() {
+    clearInterval(timer);
+    const name = document.getElementById('p-name').value;
+    alert(`Game Over! Score: ${score}`);
+    try {
+      await fetch('/save-score', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/json'}, 
+        body: JSON.stringify({name, score}) 
+      });
+    } catch(e) {}
+    showMain();
+  }
+
+  function surrenderGame() {
+    endGame();
   }
 </script>
 </body>
