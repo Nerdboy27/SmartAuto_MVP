@@ -13,32 +13,35 @@ const io = new Server(server, {
 });
 
 app.use(cors());
-app.use(express.json());
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+let autoDatabase = {
+    'AUTO_001': { totalEarnings: 0 }
+};
+
 io.on('connection', (socket) => {
-    console.log('Device connected:', socket.id);
-    
     socket.on('register_device', (autoId) => {
-        console.log('Device registered to ID:', autoId);
         socket.join(autoId);
+        
+        if (!autoDatabase[autoId]) {
+            autoDatabase[autoId] = { totalEarnings: 0 };
+        }
+        
+        socket.emit('update_total', { total: autoDatabase[autoId].totalEarnings });
     });
 });
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'DEBUG';
 
 app.post('/webhook/payment', (req, res) => {
-    console.log('Webhook received');
-    
     const shasum = crypto.createHmac('sha256', WEBHOOK_SECRET);
     shasum.update(JSON.stringify(req.body));
     const digest = shasum.digest('hex');
 
     if (req.headers['x-razorpay-signature'] !== digest && WEBHOOK_SECRET !== 'DEBUG') {
-        console.log('Signature mismatch. Secret issue.');
         return res.status(403).send('Invalid signature');
     }
 
@@ -47,17 +50,20 @@ app.post('/webhook/payment', (req, res) => {
         const amountInRupees = paymentEntity.amount / 100;
         const autoId = (paymentEntity.notes && paymentEntity.notes.autoId) ? paymentEntity.notes.autoId : 'AUTO_001';
         
-        console.log('Payment success for:', autoId, 'Amount:', amountInRupees);
+        if (!autoDatabase[autoId]) autoDatabase[autoId] = { totalEarnings: 0 };
+        autoDatabase[autoId].totalEarnings += amountInRupees;
         
-        io.to(autoId).emit('payment_received', { amount: amountInRupees });
+        io.to(autoId).emit('payment_received', { 
+            amount: amountInRupees,
+            newTotal: autoDatabase[autoId].totalEarnings
+        });
+        
         res.sendStatus(200);
     } catch (error) {
-        console.log('Error processing webhook data');
         res.status(400).send('Bad Request');
     }
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-    console.log("Server running on port", PORT);
 });
