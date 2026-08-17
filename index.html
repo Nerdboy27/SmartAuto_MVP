@@ -90,6 +90,9 @@
   const ads = ["AD SLOT 1", "AD SLOT 2", "AD SLOT 3"];
   let currentAd = 0;
 
+  let totalReceived = parseFloat(localStorage.getItem('smartAutoTotal')) || 0;
+  document.getElementById('total-val').innerText = totalReceived;
+
   setInterval(() => {
     currentAd = (currentAd + 1) % ads.length;
     document.getElementById('ad-space').innerText = ads[currentAd];
@@ -99,19 +102,18 @@
     socket.emit('register_device', autoId);
   });
 
-  socket.on('update_total', (data) => {
-    document.getElementById('total-val').innerText = data.total;
-  });
-
   socket.on('payment_received', (data) => {
     document.getElementById('idle-screen').style.display = 'none';
     document.getElementById('payment-screen').style.display = 'flex';
     document.getElementById('amount-text').innerText = "₹" + data.amount;
-    document.getElementById('total-val').innerText = data.newTotal;
+    
+    totalReceived += parseFloat(data.amount);
+    localStorage.setItem('smartAutoTotal', totalReceived);
+    document.getElementById('total-val').innerText = totalReceived;
     
     const msg = new SpeechSynthesisUtterance("Rupees " + data.amount + " received");
     window.speechSynthesis.speak(msg);
-    
+
     setTimeout(() => {
       document.getElementById('payment-screen').style.display = 'none';
       document.getElementById('idle-screen').style.display = 'flex';
