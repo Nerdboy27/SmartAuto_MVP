@@ -108,7 +108,7 @@
     const msg = new SpeechSynthesisUtterance("Rupees " + data.amount + " received");
     window.speechSynthesis.speak(msg);
 
-    totalReceived += parseInt(data.amount);
+    totalReceived += parseFloat(data.amount);
     document.getElementById('total-val').innerText = totalReceived;
     
     setTimeout(() => {
